@@ -8,12 +8,14 @@ import pygame  # Library to handle music playback
 import pyttsx3 # convert word to speak
 import threading
 import urllib.parse
+import requests
 from pytube import YouTube
 
 WAKE_WORD = "you"  # Define the wake word
 MUSIC_FOLDER = r"D:\python\Voice_Recognition\musiclibrary"  # Update this with your music folder path
 
-
+API_KEY = "fd760dd103c8406fa0eb798f9e909a88"
+BASE_URL = "https://newsapi.org/v2/top-headlines?"
 
 # Initialize pygame mixer for music playback
 pygame.mixer.init() 
@@ -179,6 +181,12 @@ def play_music_from_youtube(song_query):
         print(f"Error playing music: {e}")
         speak("Sorry, I couldn't play the music. Please try again.")
 
+def get_news(query):
+    url = f"{BASE_URL}q={query}&apiKey={API_KEY}"
+    response = requests.get(url)
+    news_data = response.json()
+    return news_data
+
 # Helper functions for system-level commands
 
 def open_application(app_name):
@@ -278,6 +286,35 @@ def get_random_song():
     except Exception as e:
         print(f"Error accessing music folder: {e}")
         return None
+    
+def main():
+    recognizer = sr.Recognizer()
+    with sr.Microphone() as source:
+        print("Say the topic you want news on...")
+        speak("Say the topic you want news on...")
+        recognizer.adjust_for_ambient_noise(source, duration=1)
+        audio = recognizer.listen(source)
+
+        try:
+            query = recognizer.recognize_google(audio).lower()
+            print(f"You asked for news about: {query}")
+            speak(f"You asked for news about: {query}")
+
+            news_data = get_news(query)
+            if news_data['status'] == 'ok':
+                for article in news_data['articles']:
+                    print(f"Title: {article['title']}")
+                    print(f"Description: {article['description']}\n")
+                    speak(f"Title: {article['title']}. Description: {article['description']}")
+            else:
+                print("No news found on this topic.")
+                speak("No news found on this topic.")
+        except sr.UnknownValueError:
+            print("Could not understand your request.")
+            speak("Sorry, I couldn't understand your request.")
+        except sr.RequestError:
+            print("Error in processing the request.")
+            speak("There was an error in processing your request.")
 
 if __name__ == "__main__":
     recognize_speech()
